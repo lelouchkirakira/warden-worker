@@ -1,0 +1,33 @@
+name: Keep Workflows Active
+
+on:
+  schedule:
+    - cron: '0 0 1 * *' 
+  workflow_dispatch:      
+
+jobs:
+  refresh_workflows:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write      
+    steps:
+      - name: Re-enable Workflows via API
+        env:
+          
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+          REPO_NAME: ${{ github.repository }}
+        run: |
+         
+          WORKFLOW_IDS=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/$REPO_NAME/actions/workflows" \
+            | jq -r '.workflows[].id')
+
+          
+          for ID in $WORKFLOW_IDS; do
+            echo "正在激活 Workflow ID: $ID ..."
+            curl -s -X PUT \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/repos/$REPO_NAME/actions/workflows/$ID/enable"
+          done
+          echo "All Workflow refreshed Successfully！"
